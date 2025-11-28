@@ -52,7 +52,6 @@ df <- read_rds(file = "data/cleaned_ILPD.RDS")
 
 
 # Base logistic regression ------------------------------------------------
-
 log_reg <- glm(
   formula = liver_disease ~ .,
   data = df,
@@ -93,7 +92,6 @@ log_reg_FNR_diff <- round(log_reg_results_F_FNR - log_reg_results_M_FNR, 4)
 
 
 ### Bootstrap FNR  ---------------------------------------------------------
-
 boot_FNR <- boot(data = log_reg_results, statistic = FNR_diff_sex_boot, R = 10000)
 boot_FNR
 boot_ci_FNR <- boot.ci(boot.out = boot_FNR, type = "norm")
