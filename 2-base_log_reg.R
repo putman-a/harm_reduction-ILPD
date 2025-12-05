@@ -15,26 +15,21 @@ FNR <- function(tab){
 } 
 
 
-# +++++++++++++++++++++++++++++++++++++
-# FNR diff function for boot strapping
-# +++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++++++
+# female FNR diff function for boot strapping
+# +++++++++++++++++++++++++++++++++++++++++++
 # data : a data frame with the predicted outcome, actual outcome, and admin sex
 # index : an integer value used by the `boot` function to keep track of iterations
-FNR_diff_sex_boot <- function(data, index) {
-  # update index for boot
+FNR_F_boot <- function(data, index) {
+  ## update index for boot function
   data <- data[index, ]
   ## split by sex
-  Fem <- data %>% filter(.,admin_sex == "Female")
-  Male <- data %>% filter(.,admin_sex == "Male")
+  F_data <- data %>% filter(., admin_sex == "Female")
   ## female fnr
-  F_tab <- table(Fem$pred_liver_disease, Fem$liver_disease)
+  F_tab <- table(F_data$pred_liver_disease, F_data$liver_disease)
   F_fnr <- FNR(F_tab)
-  ## male fnr
-  M_tab <- table(Male$pred_liver_disease, Male$liver_disease)
-  M_fnr <- FNR(M_tab)
-  ## fnr diff
-  fnr_diff <- F_fnr - M_fnr
-  return(fnr_diff)
+  ## return fnr
+  return(F_fnr)
 }
 
 
@@ -42,7 +37,7 @@ FNR_diff_sex_boot <- function(data, index) {
 # load libraries
 library(tidyverse)
 library(boot)
-library(rmoo)
+# library(rmoo)
 
 # set seed
 set.seed(42)
@@ -66,35 +61,49 @@ log_reg_pred_probs <- predict(log_reg, type = "response")
 
 ## label predicted classifications
 log_reg_pred_class <- factor(
-  if_else(log_reg_pred_probs > 0.5, "nonLD", "LD"),
-  levels = c("LD", "nonLD")
+  if_else(log_reg_pred_probs > 0.5, "pred nonLD", "pred LD"),
+  levels = c("pred LD", "pred nonLD")
   )
 
 ## create pred vs. actual df, including sex for stratification
 log_reg_results <- df %>% mutate(pred_liver_disease = log_reg_pred_class) %>%
   select(., admin_sex, liver_disease, pred_liver_disease)
 
+## export data frame with predicted results as RDS
+write_rds(log_reg_results,file = "data/base_logreg_results.RDS")
 
 ### Base FNR  ---------------------------------------------------------------
 
-# calculate for female
+# overall FNR
+log_reg_results_tab <- table(log_reg_results$pred_liver_disease, log_reg_results$liver_disease)
+log_reg_results_FNR <- FNR(log_reg_results_tab)
+
+# calculate FNR for female
 log_reg_results_F <- log_reg_results %>% filter(admin_sex == "Female")
 log_reg_results_F_tab <- table(log_reg_results_F$pred_liver_disease, log_reg_results_F$liver_disease)
 log_reg_results_F_FNR <- FNR(log_reg_results_F_tab)
 
-# calculate for male
-log_reg_results_M <- log_reg_results %>% filter(admin_sex == "Male")
-log_reg_results_M_tab <- table(log_reg_results_M$pred_liver_disease, log_reg_results_M$liver_disease)
-log_reg_results_M_FNR <- FNR(log_reg_results_M_tab)
 
-# calculate diff
-log_reg_FNR_diff <- round(log_reg_results_F_FNR - log_reg_results_M_FNR, 4)
+### Bootstrap 95% CI FNR for females ----------------------------------------
 
-
-### Bootstrap FNR  ---------------------------------------------------------
-boot_FNR <- boot(data = log_reg_results, statistic = FNR_diff_sex_boot, R = 10000)
+boot_FNR <- boot(data = log_reg_results, statistic = FNR_F_boot, R = 10000)
 boot_FNR
 boot_ci_FNR <- boot.ci(boot.out = boot_FNR, type = "norm")
 boot_ci_FNR 
 
-
+# Results from base log reg -----------------------------------------------
+base_logreg_results <- tibble(
+  "Method" = c("Base Logisitic Regression"),
+  "Optimization Objectives" = c("Log-Likelihood"),
+  "Log-Likelihood" = c(as.numeric(logLik(log_reg))),
+  "FNR for Females" = c(round(log_reg_results_F_FNR,3)),
+  "Bootstrapped 95% CI" = c(
+    paste0(
+      "(", round(boot_ci_FNR$normal[,2],3), ",", round(boot_ci_FNR$normal[,3],3),")",
+      collapse = ""
+    )
+  )
+)
+base_logreg_results
+# save results
+write_csv(base_logreg_results, file = "data/base_log_results_table.csv")
