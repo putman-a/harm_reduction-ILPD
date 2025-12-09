@@ -113,7 +113,7 @@ filtered_cor_res
 
 ### SGPT and SGOT
 # AKA AST and ALT, ALT(SGOT) is a more specific marker of hepatocellular injury
-# therefore, we SGOT direct bilirubin for the model
+# therefore, we select SGOT for the model
 
 ### SGOT and alkphos
 # AKA ALT and ALP, ALP(alkphos) is primarily indicative of cholestasis 

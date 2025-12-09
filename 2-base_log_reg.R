@@ -1,6 +1,36 @@
 
 # Custom functions --------------------------------------------------------
 
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Calculate accuracy of logistic regression prediction
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++
+# tab : a confusion table of predicted and actual values
+acc <- function(tab){
+  TP <- tab[1,1]
+  FP <- tab[1,2]
+  FN <- tab[2,1]
+  TN <- tab[2,2]
+  acc <- (TP + TN) / (TP + FP + TN + FN)
+  return(acc)
+} 
+
+
+# +++++++++++++++++++++++++++++++++++++
+# accuracy function for boot strapping
+# +++++++++++++++++++++++++++++++++++++
+# data : a data frame with the predicted outcome and actual outcomes
+# index : an integer value used by the `boot` function to keep track of iterations
+acc_boot <- function(data, index) {
+  ## update index for boot function
+  data <- data[index, ]
+  ## accuracy
+  results_tab <- table(data$pred_liver_disease, data$liver_disease)
+  results_acc <- acc(results_tab)
+  ## return accuracy
+  return(results_acc)
+}
+
+
 # ++++++++++++++++++++++++++++
 # Calculate FNR
 # ++++++++++++++++++++++++++++
@@ -15,9 +45,9 @@ FNR <- function(tab){
 } 
 
 
-# ++++++++++++++++++++++++++++++++++++++++++++
-# female FNR diff function for boot strapping
-# +++++++++++++++++++++++++++++++++++++++++++
+# ++++++++++++++++++++++++++++++++++++++++
+# female FNR  function for boot strapping
+# ++++++++++++++++++++++++++++++++++++++++
 # data : a data frame with the predicted outcome, actual outcome, and admin sex
 # index : an integer value used by the `boot` function to keep track of iterations
 FNR_F_boot <- function(data, index) {
@@ -72,10 +102,22 @@ log_reg_results <- df %>% mutate(pred_liver_disease = log_reg_pred_class) %>%
 ## export data frame with predicted results as RDS
 write_rds(log_reg_results,file = "data/base_logreg_results.RDS")
 
+
+### Base accuracy -----------------------------------------------------------
+log_reg_results_tab <- table(log_reg_results$pred_liver_disease, log_reg_results$liver_disease)
+log_reg_results_acc <- acc(log_reg_results_tab)
+
+### Bootstrap 95% CI accuracy ------------------------------------------------
+
+boot_acc <- boot(data = log_reg_results, statistic = acc_boot, R = 10000)
+boot_acc
+boot_ci_acc <- boot.ci(boot.out = boot_acc, type = "norm")
+boot_ci_acc 
+
+
 ### Base FNR  ---------------------------------------------------------------
 
 # overall FNR
-log_reg_results_tab <- table(log_reg_results$pred_liver_disease, log_reg_results$liver_disease)
 log_reg_results_FNR <- FNR(log_reg_results_tab)
 
 # calculate FNR for female
@@ -94,10 +136,17 @@ boot_ci_FNR
 # Results from base log reg -----------------------------------------------
 base_logreg_results <- tibble(
   "Method" = c("Base Logisitic Regression"),
-  "Optimization Objectives" = c("Log-Likelihood"),
+  "Optimization Objectives" = c("Negative Log-Likelihood"),
   "Log-Likelihood" = c(as.numeric(logLik(log_reg))),
+  "Accuracy" = c(round(log_reg_results_acc,3)),
+  "Accuracy Bootstrapped 95% CI" = c(
+    paste0(
+      "(", round(boot_ci_acc$normal[,2],3), ",", round(boot_ci_acc$normal[,3],3),")",
+      collapse = ""
+    )
+  ),
   "FNR for Females" = c(round(log_reg_results_F_FNR,3)),
-  "Bootstrapped 95% CI" = c(
+  "FNR Bootstrapped 95% CI" = c(
     paste0(
       "(", round(boot_ci_FNR$normal[,2],3), ",", round(boot_ci_FNR$normal[,3],3),")",
       collapse = ""

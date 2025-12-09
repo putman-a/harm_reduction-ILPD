@@ -88,22 +88,33 @@ result <- rmoo::rmoo(
   lower = lower_bounds,
   upper = upper_bounds,
   nObj = 2,
-  popSize = 40,
+  popSize = 300,
   pcrossover = 0.9,
-  maxiter  = 50000,
+  maxiter  = 10000,
   names = c('LL','FNR'),
   monitor = FALSE,
   seed = 42
 )
 result
-plot(
-  result@fitness,
-  xlim = c(290,305),
-  ylim = c(0,0.3),
-  xlab = "Log Likelihood",
-  ylab = "Female FNR",
-  sub = "pop = 40, max iter = 50000",
-  pch=16
+
+# save result
+write_rds(x = result, file = "saved_MOO_ouput/pop300max10000.RDS")
+
+# put results in a data frame
+result_df <- tibble(
+  "Negative Log Likelihood" = -result@fitness[,1],
+  "FNR for Females" = result@fitness[,2]
 )
-points(290.3,0.207, col="red",pch=17)
-text(290.5,0.207, labels = "Baseline",pos=3,col="red")
+
+# plot
+ggplot(result_df, aes(x = `Negative Log Likelihood`, y = `FNR for Females`)) +
+  geom_point() +
+  annotate("point", x=-290.3,y=0.207, colour = "blue",size=4, shape=17) +
+  annotate("text",x=-290.4,y=.222, label="Standard MLE",colour="blue") +
+  labs(
+    title = "NSGA-II-derived Logistic Regression Performance",
+    caption = "Population = 300, Max Iter. = 10,000"
+    ) +
+  ylim(0,.25) +
+  scale_x_reverse(limits = c(-294,-290)) +
+  theme_classic()
