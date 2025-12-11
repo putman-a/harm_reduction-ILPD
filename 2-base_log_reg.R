@@ -62,8 +62,32 @@ FNR_F_boot <- function(data, index) {
   return(F_fnr)
 }
 
+# ++++++++++++++++++++++++++++++++++++++++
+# NLL  function for boot strapping
+# ++++++++++++++++++++++++++++++++++++++++
+# data : the training data 
+# index : an integer value used by the `boot` function to keep track of iterations
+nll_boot <- function(data, index) {
+  ## update index for boot function
+  data <- data[index, ]
+  
+  ## logistic regression
+  logreg <- glm(
+    formula = liver_disease ~ .,
+    data = data,
+    family = binomial(link = "logit")
+  )
+  
+  ## extract NLL
+  nll <- as.numeric(logLik(logreg))
+
+  ## return nll
+  return(nll)
+}
+
 
 # Set up ------------------------------------------------------------------
+
 # load libraries
 library(tidyverse)
 library(boot)
@@ -102,17 +126,8 @@ log_reg_results <- df %>% mutate(pred_liver_disease = log_reg_pred_class) %>%
 ## export data frame with predicted results as RDS
 write_rds(log_reg_results,file = "data/base_logreg_results.RDS")
 
-
-### Base accuracy -----------------------------------------------------------
+## create results table
 log_reg_results_tab <- table(log_reg_results$pred_liver_disease, log_reg_results$liver_disease)
-log_reg_results_acc <- acc(log_reg_results_tab)
-
-### Bootstrap 95% CI accuracy ------------------------------------------------
-
-boot_acc <- boot(data = log_reg_results, statistic = acc_boot, R = 10000)
-boot_acc
-boot_ci_acc <- boot.ci(boot.out = boot_acc, type = "norm")
-boot_ci_acc 
 
 
 ### Base FNR  ---------------------------------------------------------------
@@ -133,22 +148,61 @@ boot_FNR
 boot_ci_FNR <- boot.ci(boot.out = boot_FNR, type = "norm")
 boot_ci_FNR 
 
-# Results from base log reg -----------------------------------------------
+
+## Calculate base NLL ----------------------------------------------------
+log_reg_results_nll <- as.numeric(logLik(log_reg))
+
+### Bootstrap 95% CI NLL ------------------------------------------------
+boot_nll <- boot(data = df, statistic = nll_boot, R = 10000)
+boot_nll
+boot_ci_nll <- boot.ci(boot.out = boot_nll, type = "norm")
+boot_ci_nll 
+
+
+## Calculate base accuracy -----------------------------------------------------------
+log_reg_results_acc <- acc(log_reg_results_tab)
+
+### Bootstrap 95% CI accuracy ------------------------------------------------
+boot_acc <- boot(data = log_reg_results, statistic = acc_boot, R = 10000)
+boot_acc
+boot_ci_acc <- boot.ci(boot.out = boot_acc, type = "norm")
+boot_ci_acc 
+
+
+# Results into data frame for output -----------------------------------------
 base_logreg_results <- tibble(
   "Method" = c("Base Logisitic Regression"),
   "Optimization Objectives" = c("Negative Log-Likelihood"),
-  "Log-Likelihood" = c(as.numeric(logLik(log_reg))),
+  "NLL" = c(as.numeric(logLik(log_reg))),
+  "NLL Bootstrapped 95%CI" = c(
+    paste0(
+      "(", 
+      round(boot_ci_nll$normal[,2],3), 
+      ",", 
+      round(boot_ci_nll$normal[,3],3),
+      ")",
+      collapse = ""
+    )
+  ),
   "Accuracy" = c(round(log_reg_results_acc,3)),
   "Accuracy Bootstrapped 95% CI" = c(
     paste0(
-      "(", round(boot_ci_acc$normal[,2],3), ",", round(boot_ci_acc$normal[,3],3),")",
+      "(", 
+      round(boot_ci_acc$normal[,2],3), 
+      ",", 
+      round(boot_ci_acc$normal[,3],3),
+      ")",
       collapse = ""
     )
   ),
   "FNR for Females" = c(round(log_reg_results_F_FNR,3)),
   "FNR Bootstrapped 95% CI" = c(
     paste0(
-      "(", round(boot_ci_FNR$normal[,2],3), ",", round(boot_ci_FNR$normal[,3],3),")",
+      "(", 
+      round(boot_ci_FNR$normal[,2],3), 
+      ",", 
+      round(boot_ci_FNR$normal[,3],3),
+      ")",
       collapse = ""
     )
   )

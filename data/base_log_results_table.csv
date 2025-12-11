@@ -1,2 +1,2 @@
-Method,Optimization Objectives,Log-Likelihood,Accuracy,Accuracy Bootstrapped 95% CI,FNR for Females,FNR Bootstrapped 95% CI
-Base Logisitic Regression,Negative Log-Likelihood,-290.29623583732734,0.732,"(0.697,0.768)",0.207,"(0.125,0.289)"
+Method,Optimization Objectives,NLL,NLL Bootstrapped 95%CI,Accuracy,Accuracy Bootstrapped 95% CI,FNR for Females,FNR Bootstrapped 95% CI
+Base Logisitic Regression,Negative Log-Likelihood,-290.29623583732734,"(-317.694,-271.713)",0.732,"(0.697,0.769)",0.207,"(0.124,0.29)"
