@@ -1,4 +1,4 @@
-Measure,NLL,FNR in Females,Measure_weak,NLL_weak,FNR in Females_weak,Measure_mod,NLL_mod,FNR in Females_mod
+Measure,NLL,FNR in Females,Measure_weak,NLL_weak,FNR in Females_weak,Measure_accept,NLL_accept,FNR in Females_accept
 Mean(SD),-291.2(0.38),0.0804(0.05407),Mean(SD),-291.3(0.37),0.0564(0.03902),Mean(SD),-291.6(0.35),0.0167(0.01244)
 Median(IQR),-291(0.5),0.087(0.09783),Median(IQR),-291.2(0.47),0.0543(0.07609),Median(IQR),-291.4(0.32),0.0217(0.02446)
 Min:Max,-292.2:-290.8,0:0.1848,Min:Max,-292.2:-290.9,0:0.1196,Min:Max,-292.2:-291.4,0:0.0326

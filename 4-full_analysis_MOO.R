@@ -124,17 +124,9 @@ result <- read_rds(file = "saved_MOO_ouput/pop300max10000.RDS")
 # put results in a data frame
 result_df <- MOO_results(result)
 
-# plot MOO suggestions
-MOO_plot(result_df,pop = 300,miter = 10000) +
-  labs(title = "NSGA-II")
-
-
 
 # plot for paper ----------------------------------------------------------
 
-# define polygon coordinates for the CI shape
-x_points <- c(-317.7, -290.3, -271.7,-290.3)
-y_points <- c(.207, .124, .207, .290)
 
 # rename column
 plot_df <- result_df %>% mutate("Female FNR" = `FNR for Females`)
@@ -142,83 +134,50 @@ plot_df <- result_df %>% mutate("Female FNR" = `FNR for Females`)
 # plot
 ggplot(plot_df, aes(x = `Negative Log Likelihood`, y = `Female FNR`)) +
   ## scatterplot
-  geom_point() +
-  ## draw polygon representing the 95%CI
+  geom_point(colour="blue") +
+  # ## add reject background
+  # annotate(
+  #   geom="rect", xmax =-290.3, xmin=-306, ymax=.31,  ymin=-0.01,
+  #   fill="grey", alpha=.1
+  # ) +
+  ## add weak accept highlight
   annotate(
-    geom = "polygon", 
-    x=x_points,
-    y=y_points, 
-    fill="purple",
-    alpha=.15
-    ) +
+    geom="rect", xmax =-290.3, xmin=-305, ymax=.124, ymin=.041,
+    fill="forestgreen", alpha=.2
+  ) +
+  ## add strong accept highlight
+  annotate(
+    geom="rect", xmax =-290.3, xmin=-305, ymax=.041,  ymin=-0.01,
+    fill="forestgreen", alpha=.3
+  ) +
   ## add the SO point
   annotate(
-    geom = "point", 
-    x=-290.3, 
-    y=0.207,
-    colour="purple", 
-    size=5, 
-    shape=18
-    ) +
+    geom="point", x=-290.3, y=.207,
+    colour="red", size=5, shape=17) +
   ## label for SO point
-  annotate(
-    geom = "text", 
-    x=-303, 
-    y=.29, 
-    label="SO (NLL)",
-    size=3.5
-    ) +
+  annotate(geom="text", x=-293, y=.25, label="bold(SO) (NLL)", size=4, parse=TRUE) +
   ## arrow from label to SO point
   annotate(
-    geom = "curve", 
-    x = -299.5, 
-    y = .289, 
-    xend =-290.4, 
-    yend = 0.215,
-    curvature = -.3, 
-    arrow = arrow(length = unit(2, "mm"))
+    geom="curve", x=-292.5, y=.242, xend =-290.7, yend =.21,
+    curvature=.2, arrow=arrow(length=unit(2,"mm"))
   ) +
-  ## label for 95%CI area
+  ## label for NSGAII label
+  annotate(geom="text", x=-295, y=.07, label="bold(MOO) (NSGA2)", size=4, parse=TRUE) +
+  ## arrow from label NSGAII points
   annotate(
-    geom = "text", 
-    x=-312, 
-    y=0.25, 
-    label="SO 95%CI",
-    size=3.5
-    ) +
-  ## arrow from label to shaded area
-  annotate(
-    geom = "curve", 
-    x = -312, 
-    y = .242, 
-    xend =-307, 
-    yend = 0.20,
-    curvature = .3, 
-    arrow = arrow(length = unit(2, "mm")),
+    geom="curve", x=-294, y=.062, xend=-291.5, yend=.054,
+    curvature=.2, arrow=arrow(length=unit(2,"mm"))
   ) +
-  ## label for NSGA-II points
-  annotate(
-    geom = "text", 
-    x=-307, 
-    y=0.02, 
-    label="NSGA-II",
-    size=3.5
-    ) +
-  ## arrow from label to NSGA-II points
-  annotate(
-    geom = "curve", 
-    x = -304, 
-    y = .02, 
-    xend =-292, 
-    yend = 0.05,
-    curvature = .2, 
-    arrow = arrow(length = unit(2, "mm"))
-  ) +
+  ## label for weak accept
+  annotate(geom="text", x=-305, y=.124, label="Weak Accept", vjust=2, hjust=1.2, size=3.5) +
+  ## label for strong accept
+  annotate(geom="text", x=-305, y=.041, label="Acceptable", vjust=2, hjust=1.2, size=3.5) +
   ## subtitle
   labs(subtitle = "NSGA-II: Population = 300, Max. Iter. = 10000") +
   ## y and x limits
-  ylim(0,.3) +
-  scale_x_reverse(limits = c(-320,-270)) +
+  scale_x_reverse( labels=scales::label_number(accuracy=0.1)) +
+  scale_y_continuous(labels=scales::label_number(accuracy=0.01)) +
+  coord_cartesian(xlim = c(-305,-290), ylim=c(0,.3), expand = TRUE, clip = "off") +
   ## classic theme
   theme_classic()
 
@@ -291,7 +250,7 @@ NSGA_result_summary <- tibble(
 # select weak accept
 weak <- result_df %>%
   filter(
-    `FNR for Females` < 0.124 | `Negative Log Likelihood` > -271.7
+    `FNR for Females` < 0.124 & `Negative Log Likelihood` > -317.7
   )
 
 ## add to results
@@ -350,84 +309,71 @@ NSGA_result_plus_weak <- NSGA_result_summary %>%
 )
 
 
-# Moderate accept ---------------------------------------------------------
+## Acceptable --------------------------------------------------------
 
-# select moderate accept
-moderate <- result_df %>%
+# select accept
+accept <- result_df %>%
   filter(
-    (`FNR for Females` < 0.124 & `Negative Log Likelihood` > -271.7) | 
-      (`FNR for Females` < (0.124 - 0.083) ) |
-      (`Negative Log Likelihood` > (-271.7 + 18.6))
+      (`FNR for Females` < (0.124 - 0.083) ) &
+      (`Negative Log Likelihood` > -317.7)
   )
 
 ## add to results
 # create tibble of outputs
-NSGA_result_plus_mod <- NSGA_result_plus_weak %>% 
+NSGA_result_plus_accept <- NSGA_result_plus_weak %>% 
   mutate(
-    Measure_mod = c(
+    Measure_accept = c(
       "Mean(SD)",
       "Median(IQR)",
       "Min:Max"
     ),
-    NLL_mod = c(
+    NLL_accept = c(
       ## mean(sd)
       paste0(
-        round(mean(moderate$`Negative Log Likelihood`),1),
+        round(mean(accept$`Negative Log Likelihood`),1),
         "(",
-        round(sd(moderate$`Negative Log Likelihood`),2),
+        round(sd(accept$`Negative Log Likelihood`),2),
         ")"
       ),
       ## median(IQR)
       paste0(
-        round(median(moderate$`Negative Log Likelihood`),1),
+        round(median(accept$`Negative Log Likelihood`),1),
         "(",
-        round(IQR(moderate$`Negative Log Likelihood`),2),
+        round(IQR(accept$`Negative Log Likelihood`),2),
         ")"
       ),
       ## min:max
       paste0(
-        round(min(moderate$`Negative Log Likelihood`),1),
+        round(min(accept$`Negative Log Likelihood`),1),
         ":",
-        round(max(moderate$`Negative Log Likelihood`),1)
+        round(max(accept$`Negative Log Likelihood`),1)
       )
     ),
-    "FNR in Females_mod" = c(
+    "FNR in Females_accept" = c(
       ## mean(sd)
       paste0(
-        round(mean(moderate$`FNR for Females`),4),
+        round(mean(accept$`FNR for Females`),4),
         "(",
-        round(sd(moderate$`FNR for Females`),5),
+        round(sd(accept$`FNR for Females`),5),
         ")"
       ),
       ## median(IQR)
       paste0(
-        round(median(moderate$`FNR for Females`),4),
+        round(median(accept$`FNR for Females`),4),
         "(",
-        round(IQR(moderate$`FNR for Females`),5),
+        round(IQR(accept$`FNR for Females`),5),
         ")"
       ),
       ## min:max
       paste0(
-        round(min(moderate$`FNR for Females`),4),
+        round(min(accept$`FNR for Females`),4),
         ":",
-        round(max(moderate$`FNR for Females`),4)
+        round(max(accept$`FNR for Females`),4)
       )
     )
   )
 
 
-## Strong accept -----------------------------------------------------------
-
-# select strong accept
-strong <- result_df %>%
-  filter(
-      (`FNR for Females` < (0.124 - 0.083) ) &
-      (`Negative Log Likelihood` > (-271.7 + 18.6))
-  )
-
-# no models meet this criteria!!!
-
-
 # Save results ------------------------------------------------------------
 
-write_csv(NSGA_result_plus_mod, file = "data/NSGA2_summary_table.csv")
+write_csv(NSGA_result_plus_accept, file = "data/NSGA2_summary_table.csv")
